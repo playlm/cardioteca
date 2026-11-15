@@ -25,6 +25,7 @@ const LS = {
 const I = {
   home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/>',
   library: '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10l2 2.5h6.5A1.5 1.5 0 0 1 20 8v10.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5Z"/>',
+  folder: '<path d="M4 6.5A1.5 1.5 0 0 1 5.5 5H10l2 2.5h6.5A1.5 1.5 0 0 1 20 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5Z"/>',
   playFill: '<path d="M7 4.5v15l13-7.5Z" fill="currentColor" stroke="none"/>',
   play: '<rect x="3" y="5" width="18" height="14" rx="3.5"/><path d="m10.5 9.5 4 2.5-4 2.5Z" fill="currentColor"/>',
   tasks: '<rect x="4" y="4" width="16" height="16" rx="3.5"/><path d="m8.5 12.2 2.6 2.6 4.6-5.2"/>',
@@ -423,7 +424,8 @@ function render() {
   const fn = { inicio: vInicio, biblioteca: vBiblioteca, videos: vVideos, pendientes: vPendientes }[ui.view];
   v.innerHTML = fn();
   if (ui.view === 'inicio') { mountHero(); loadRecent(); }
-  if (ui.view === 'videos') bindVideoAutoplayReset();
+  if (ui.view === 'videos') { bindVideoAutoplayReset(); loadTopFolders(); }
+  if (ui.view === 'biblioteca') ui.autoplay = false;
 }
 
 /* — Inicio — */
@@ -505,12 +507,22 @@ function vBiblioteca() {
   else if (!items.length) body = L.results ? `<div class="empty"><strong>Sin resultados</strong>Prueba con otra palabra.</div>` :
     `<div class="empty"><strong>${L.path.length > 1 ? 'Esta carpeta está vacía' : 'Tu biblioteca está vacía'}</strong>Arrastra PDFs o presentaciones aquí, o usa el botón Subir.</div>
      ${L.path.length <= 1 ? `<button class="btn" type="button" data-act="suggest">${icon('folderPlus')}<span>Crear carpetas de cardiología</span></button>` : ''}`;
-  else body = `${folders.length ? `<h2 class="sec-title">Carpetas</h2><div class="folders">${folders.map(f => `<div class="folder"><button class="folder__open" type="button" data-act="open-folder" data-id="${f.id}" aria-label="Abrir ${esc(f.name)}"></button><span class="folder__name">${esc(f.name)}</span><span class="folder__meta">${esc(fmtShort(f.modifiedTime))}</span><span class="folder__tools"><button class="icon-btn" type="button" data-act="rename" data-id="${f.id}" aria-label="Renombrar">${icon('edit')}</button><button class="icon-btn icon-btn--danger" type="button" data-act="trash" data-id="${f.id}" aria-label="Enviar a la papelera">${icon('trash')}</button></span></div>`).join('')}</div>` : ''}
+  else body = `${folders.length ? `<h2 class="sec-title">Carpetas</h2><div class="folders">${folders.map(f => `<div class="folder"><button class="folder__open" type="button" data-act="open-folder" data-id="${f.id}" aria-label="Abrir ${esc(f.name)}"></button><span class="folder__name">${esc(f.name)}</span><span class="folder__meta">${(n => n ? `<b class="folder__vids">${icon('playFill')}${n} ${n === 1 ? 'video' : 'videos'}</b>` : '')(data.videos.filter(v => v.folderId === f.id).length)}${esc(fmtShort(f.modifiedTime))}</span><span class="folder__tools"><button class="icon-btn" type="button" data-act="rename" data-id="${f.id}" aria-label="Renombrar">${icon('edit')}</button><button class="icon-btn icon-btn--danger" type="button" data-act="trash" data-id="${f.id}" aria-label="Enviar a la papelera">${icon('trash')}</button></span></div>`).join('')}</div>` : ''}
     ${files.length ? `<h2 class="sec-title">Archivos</h2><div class="files">${files.map(f => fileRow(f)).join('')}</div>` : ''}`;
   return `<header class="ph"><div><div class="crumbs">${crumbs}${L.results ? '<span aria-hidden="true">/</span><button type="button" aria-current="page">Búsqueda</button>' : ''}</div><h1>${esc(L.results ? 'Resultados' : cur.name)}</h1></div>
     <div class="ph__actions"><button class="btn" type="button" data-act="new-folder">${icon('folderPlus')}<span>Nueva carpeta</span></button><button class="btn btn--primary" type="button" data-act="pick-files">${icon('upload')}<span>Subir archivos</span></button></div></header>
     <form class="lib-tools" data-form="search" role="search"><label class="sr" for="q">Buscar en la biblioteca</label><input id="q" class="field" type="search" placeholder="Buscar por nombre en toda la biblioteca" value="${esc(L.q)}"><button class="btn" type="submit">${icon('search')}<span>Buscar</span></button></form>
-    ${body}`;
+    ${body}
+    ${L.results || L.loading || L.error ? '' : folderVideos(cur)}`;
+}
+function folderVideos(cur) {
+  const list = data.videos.filter(v => v.folderId === cur.id), pl = list.find(v => v.id === ui.videoId);
+  return `<section class="fvid" aria-labelledby="fvidT">
+    <div class="fvid__head"><h2 class="sec-title" id="fvidT">Videos de ${esc(cur.name)}</h2><span class="fvid__count">${list.length} ${list.length === 1 ? 'video' : 'videos'}</span></div>
+    <form class="vadd vadd--folder" data-form="add-video"><input type="hidden" name="folderId" value="${esc(cur.id)}"><input type="hidden" name="folderName" value="${esc(cur.name)}"><label class="sr" for="fvUrl">Link de YouTube</label><input id="fvUrl" class="field" name="url" placeholder="Pega un link de YouTube para guardarlo en esta carpeta" required autocomplete="off"><button class="btn btn--primary" type="submit">${icon('plus')}<span>Guardar video aquí</span></button></form>
+    ${pl ? stageHTML(pl) : ''}
+    ${list.length ? `<div class="vgrid">${list.map(vCard).join('')}</div>` : `<div class="empty"><strong>Sin videos en esta carpeta</strong>Pega un link de YouTube arriba y quedará junto a tus PDFs y presentaciones de este tema.</div>`}
+  </section>`;
 }
 async function openFolder(id, name, push = true) {
   const L = ui.lib;
@@ -580,37 +592,60 @@ async function ytTitle(id) {
   }
   return { title: 'Video de YouTube', author: '' };
 }
+const topFolders = () => ui.topFolders || [];
+function knownFolders() {
+  const m = new Map();
+  topFolders().forEach(f => m.set(f.id, f.name));
+  ui.lib.path.forEach(p => p.id && p.name && m.set(p.id, p.name));
+  data.videos.forEach(v => v.folderId && v.folderName && m.set(v.folderId, v.folderName));
+  return [...m].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+}
+async function loadTopFolders() {
+  if (!canLib() || ui.topFolders) return;
+  try { ui.topFolders = (await Lib.list(rootId())).filter(isFolder).map(f => ({ id: f.id, name: f.name })); } catch { ui.topFolders = []; }
+  if (ui.view === 'videos' && !document.activeElement?.matches('input,textarea,select')) render();
+}
 const allTags = () => [...new Set(data.videos.map(v => v.tag).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
-function vVideos() {
-  const tags = allTags(), list = data.videos.filter(v => !ui.tag || v.tag === ui.tag);
-  const cur = data.videos.find(v => v.id === ui.videoId);
-  const stage = cur ? `<section class="stage"><div class="player"><iframe src="https://www.youtube-nocookie.com/embed/${esc(cur.vid)}?rel=0&modestbranding=1&playsinline=1${cur.start ? `&start=${cur.start}` : ''}${ui.autoplay ? '&autoplay=1' : ''}" title="${esc(cur.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+const foldersOpts = (sel) => knownFolders().map(f => `<option value="${esc(f.id)}" ${f.id === sel ? 'selected' : ''}>${esc(f.name)}</option>`).join('');
+function stageHTML(cur) {
+  if (!cur) return '';
+  return `<section class="stage"><div class="player"><iframe src="https://www.youtube-nocookie.com/embed/${esc(cur.vid)}?rel=0&modestbranding=1&playsinline=1${cur.start ? `&start=${cur.start}` : ''}${ui.autoplay ? '&autoplay=1' : ''}" title="${esc(cur.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
     <div class="stage__info"><h2>${esc(cur.title)}</h2>
-      <div><label class="sr" for="vTag">Tema</label><input id="vTag" class="field" list="tagList" value="${esc(cur.tag || '')}" placeholder="Tema (ej. Arritmias)" data-field="tag" data-id="${cur.id}"></div>
+      <div class="stage__folder"><label for="vFolder">Carpeta</label><select id="vFolder" class="field" data-field="folder" data-id="${cur.id}"><option value="">Sin carpeta</option>${foldersOpts(cur.folderId)}</select></div>
+      <div class="stage__folder"><label for="vTag">Tema</label><input id="vTag" class="field" list="tagList" value="${esc(cur.tag || '')}" placeholder="Tema (ej. Arritmias)" data-field="tag" data-id="${cur.id}"></div>
       <div><label class="sr" for="vNote">Notas</label><textarea id="vNote" class="field" placeholder="Notas del video: minutos clave, ideas, dudas…" data-field="note" data-id="${cur.id}">${esc(cur.note || '')}</textarea></div>
       <div class="stage__row"><button class="btn" type="button" data-act="watched" data-id="${cur.id}" aria-pressed="${!!cur.watched}">${icon('check')}<span>${cur.watched ? 'Visto' : 'Marcar como visto'}</span></button>
       <button class="btn" type="button" data-act="rename-video" data-id="${cur.id}">${icon('edit')}<span>Cambiar título</span></button>
-      <a class="btn" href="https://www.youtube.com/watch?v=${esc(cur.vid)}" target="_blank" rel="noopener">${icon('external')}<span>YouTube</span></a></div></div></section>` : '';
+      <a class="btn" href="https://www.youtube.com/watch?v=${esc(cur.vid)}" target="_blank" rel="noopener">${icon('external')}<span>YouTube</span></a></div></div></section>`;
+}
+function vVideos() {
+  const tags = allTags();
+  const cur = data.videos.find(v => v.id === ui.videoId);
+  const stage = stageHTML(cur);
   return `<header class="ph"><div><h1>Videos</h1><p>Guarda el link de un video de YouTube y míralo aquí mismo, junto a tus notas.</p></div></header>
-  <form class="vadd" data-form="add-video"><label class="sr" for="vUrl">Link de YouTube</label><input id="vUrl" class="field" name="url" placeholder="Pega un link de YouTube" required autocomplete="off">
-    <label class="sr" for="vNewTag">Tema</label><input id="vNewTag" class="field" name="tag" list="tagList" placeholder="Tema (opcional)" autocomplete="off" value="${esc(ui.tag)}"><button class="btn btn--primary" type="submit">${icon('plus')}<span>Guardar video</span></button></form>
+  <form class="vadd vadd--3" data-form="add-video"><label class="sr" for="vUrl">Link de YouTube</label><input id="vUrl" class="field" name="url" placeholder="Pega un link de YouTube" required autocomplete="off">
+    <label class="sr" for="vNewFolder">Carpeta</label><select id="vNewFolder" class="field" name="folderId"><option value="">Sin carpeta</option>${foldersOpts('')}</select><label class="sr" for="vNewTag">Tema</label><input id="vNewTag" class="field" name="tag" list="tagList" placeholder="Tema" autocomplete="off" value="${esc(ui.tag)}"><button class="btn btn--primary" type="submit">${icon('plus')}<span>Guardar video</span></button></form>
   <datalist id="tagList">${[...new Set([...tags, 'Electrocardiografía', 'Arritmias', 'Insuficiencia cardíaca', 'Cardiopatía isquémica', 'Valvulopatías', 'Farmacología', 'Casos clínicos'])].map(t => `<option value="${esc(t)}">`).join('')}</datalist>
   ${stage}
   <div id="vlist">${vList()}</div>`;
 }
+const vCard = v => `<div class="vwrap"><button class="vcard" type="button" data-act="play-video" data-id="${v.id}" aria-current="${v.id === ui.videoId}"><span class="vcard__thumb"><img src="https://i.ytimg.com/vi/${esc(v.vid)}/mqdefault.jpg" alt="" loading="lazy"><span class="vcard__play">${icon('playFill')}</span>${v.watched ? '<span class="vcard__seen">Visto</span>' : ''}</span><span class="vcard__title">${esc(v.title)}</span><span class="vcard__tag">${esc(v.tag || 'Sin tema')}</span>${folderBadge(v)}</button><button class="icon-btn icon-btn--danger vcard__x" type="button" data-act="del-video" data-id="${v.id}" aria-label="Quitar ${esc(v.title)}">${icon('x')}</button></div>`;
+const folderBadge = v => v.folderName && v.folderName !== v.tag ? `<span class="vcard__folder">${icon('folder')}${esc(v.folderName)}</span>` : '';
 function vList() {
   const tags = allTags(), list = data.videos.filter(v => !ui.tag || v.tag === ui.tag);
   return `${data.videos.length ? `<div class="vfilters" role="group" aria-label="Filtrar por tema"><button class="chip" type="button" data-act="tag" data-tag="" aria-pressed="${!ui.tag}">Todos (${data.videos.length})</button>${tags.map(t => `<button class="chip" type="button" data-act="tag" data-tag="${esc(t)}" aria-pressed="${ui.tag === t}">${esc(t)}</button>`).join('')}</div>
-  <div class="vgrid">${list.map(v => `<div class="vwrap"><button class="vcard" type="button" data-act="play-video" data-id="${v.id}" aria-current="${v.id === ui.videoId}"><span class="vcard__thumb"><img src="https://i.ytimg.com/vi/${esc(v.vid)}/mqdefault.jpg" alt="" loading="lazy"><span class="vcard__play">${icon('playFill')}</span>${v.watched ? '<span class="vcard__seen">Visto</span>' : ''}</span><span class="vcard__title">${esc(v.title)}</span><span class="vcard__tag">${esc(v.tag || 'Sin tema')}</span></button><button class="icon-btn icon-btn--danger vcard__x" type="button" data-act="del-video" data-id="${v.id}" aria-label="Quitar ${esc(v.title)}">${icon('x')}</button></div>`).join('')}</div>`
+  <div class="vgrid">${list.map(vCard).join('')}</div>`
   : `<div class="empty"><strong>Aún no guardaste videos</strong>Pega un link de YouTube arriba. Se queda guardado y se reproduce sin salir de Cardioteca.</div>`}`;
 }
+function refreshVideos() { const l = $('#vlist'); if (l) l.innerHTML = vList(); else if (ui.view === 'biblioteca') render(); }
 function bindVideoAutoplayReset() { ui.autoplay = false; }
-async function addVideo(url, tag) {
+async function addVideo(url, tag, folder) {
   const p = ytId(url); if (!p) { toast('Ese link no parece de YouTube', 'error'); return; }
-  if (data.videos.some(v => v.vid === p.id)) { toast('Ese video ya está guardado'); ui.videoId = data.videos.find(v => v.vid === p.id).id; ui.autoplay = false; render(); return; }
+  if (data.videos.some(v => v.vid === p.id)) { const ex = data.videos.find(v => v.vid === p.id); ui.videoId = ex.id; ui.autoplay = false;
+    if (folder && ex.folderId !== folder.id) { ex.folderId = folder.id; ex.folderName = folder.name; if (!ex.tag) ex.tag = folder.name; touch(); toast('Video movido a ' + folder.name); } else toast('Ese video ya está guardado'); render(); return; }
   toast('Guardando video…');
   const meta = await ytTitle(p.id);
-  const v = { id: uid(), vid: p.id, start: p.start, title: meta.title, tag: (tag || '').trim(), note: '', watched: false, addedAt: Date.now() };
+  const v = { id: uid(), vid: p.id, start: p.start, title: meta.title, tag: (tag || '').trim() || (folder ? folder.name : ''), folderId: folder ? folder.id : '', folderName: folder ? folder.name : '', note: '', watched: false, addedAt: Date.now() };
   data.videos.unshift(v); touch(); ui.videoId = v.id; ui.autoplay = false; render(); toast('Video guardado');
 }
 
@@ -650,9 +685,9 @@ const actions = {
   rename: async el => { const f = findItem(el.dataset.id); if (!f) return; const n = await askText({ title: 'Renombrar', label: 'Nuevo nombre', value: f.name }); if (!n || n === f.name) return; try { await Lib.rename(f.id, n); ui.recent = null; await openFolder(curFolder(), '', false); toast('Nombre actualizado'); } catch (e) { toast(e.message, 'error'); } },
   trash: async el => { const f = findItem(el.dataset.id); if (!f) return; if (!await askConfirm({ title: `¿Eliminar “${f.name}”?`, text: isFolder(f) ? 'La carpeta y todo lo que contiene irá a la papelera de Google Drive. Puedes recuperarla desde allí.' : 'Irá a la papelera de Google Drive. Puedes recuperarlo desde allí.', ok: 'Enviar a la papelera' })) return; try { await Lib.trash(f.id); ui.recent = null; await openFolder(curFolder(), '', false); toast('Enviado a la papelera'); } catch (e) { toast(e.message, 'error'); } },
   /* videos */
-  'play-video': el => { ui.videoId = el.dataset.id; ui.autoplay = true; if (ui.view !== 'videos') { location.hash = '#/videos'; } else { render(); $('.player')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } },
+  'play-video': el => { ui.videoId = el.dataset.id; ui.autoplay = true; if (ui.view !== 'videos' && ui.view !== 'biblioteca') { location.hash = '#/videos'; } else { render(); $('.player')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } },
   tag: el => { ui.tag = el.dataset.tag; $('#vlist').innerHTML = vList(); },
-  watched: el => { const v = data.videos.find(x => x.id === el.dataset.id); v.watched = !v.watched; touch(); el.setAttribute('aria-pressed', v.watched); $('span', el).textContent = v.watched ? 'Visto' : 'Marcar como visto'; $('#vlist').innerHTML = vList(); },
+  watched: el => { const v = data.videos.find(x => x.id === el.dataset.id); v.watched = !v.watched; touch(); el.setAttribute('aria-pressed', v.watched); $('span', el).textContent = v.watched ? 'Visto' : 'Marcar como visto'; refreshVideos(); },
   'rename-video': async el => { const v = data.videos.find(x => x.id === el.dataset.id); const n = await askText({ title: 'Cambiar título', label: 'Título', value: v.title }); if (n) { v.title = n; touch(); ui.autoplay = false; render(); } },
   'del-video': async el => { const v = data.videos.find(x => x.id === el.dataset.id); if (!await askConfirm({ title: '¿Quitar este video?', text: `“${v.title}” dejará de estar en tu lista. El video en YouTube no se borra.`, ok: 'Quitar' })) return; data.videos = data.videos.filter(x => x !== v); if (ui.videoId === v.id) ui.videoId = null; touch(); render(); },
   /* pendientes */
@@ -681,7 +716,8 @@ view.addEventListener('submit', async e => {
   const f = e.target.closest('[data-form]'); if (!f) return; e.preventDefault();
   const kind = f.dataset.form, fd = new FormData(f);
   if (kind === 'add-todo') { const text = String(fd.get('text')).trim(); if (!text) return; (data.todos[ui.day] ||= []).push({ id: uid(), text, done: false }); touch(); render(); $('#tNew')?.focus(); }
-  if (kind === 'add-video') { const btn = $('button[type=submit]', f); btn.disabled = true; await addVideo(String(fd.get('url')), String(fd.get('tag'))); }
+  if (kind === 'add-video') { const btn = $('button[type=submit]', f); btn.disabled = true; const fid = String(fd.get('folderId') || ''), fname = String(fd.get('folderName') || '') || knownFolders().find(x => x.id === fid)?.name || '';
+    await addVideo(String(fd.get('url')), String(fd.get('tag') || ''), fid ? { id: fid, name: fname } : null); }
   if (kind === 'search') {
     const q = String(fd.get('q') || $('#q').value).trim(), L = ui.lib; L.q = q;
     if (!q) { L.results = null; render(); return; }
@@ -693,6 +729,7 @@ view.addEventListener('submit', async e => {
 view.addEventListener('change', e => {
   const t = e.target; if (!t.dataset.field) return;
   const v = data.videos.find(x => x.id === t.dataset.id); if (!v) return;
+  if (t.dataset.field === 'folder') { const o = t.selectedOptions[0]; v.folderId = t.value; v.folderName = t.value ? o.textContent : ''; if (t.value && !v.tag) v.tag = v.folderName; touch(); render(); return; }
   v[t.dataset.field] = t.value.trim(); touch();
   if (t.dataset.field === 'tag') $('#vlist').innerHTML = vList();
 });
