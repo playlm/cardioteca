@@ -369,3 +369,22 @@ button.chip:hover { color: var(--ink); background: var(--panel-2); }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ───────── videos dentro de cada carpeta ───────── */
+.vadd--3 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; }
+.vadd--folder { grid-template-columns: minmax(0, 1fr) auto; margin-bottom: 22px; }
+select.field { appearance: none; padding-right: 34px; cursor: pointer; text-overflow: ellipsis;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 55%, calc(100% - 13px) 55%; background-size: 5px 5px; background-repeat: no-repeat; }
+.fvid { position: relative; margin-top: 34px; padding: 26px 24px 24px; border-radius: var(--radius); background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--ven); }
+.fvid__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.fvid__head .sec-title { margin: 0; overflow-wrap: anywhere; }
+.fvid__count { font-size: 13px; color: var(--muted); }
+.fvid .stage { margin-top: 4px; }
+.stage__folder { display: grid; gap: 6px; }
+.stage__folder label { font-size: 13px; color: var(--muted); }
+.vcard__folder { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ven); }
+.vcard__folder svg { width: 14px; height: 14px; }
+.folder__vids { display: inline-flex; align-items: center; gap: 5px; margin-right: 8px; padding: 1px 8px 1px 6px; border-radius: 999px; font-weight: 600; font-size: 12px; color: var(--art); background: color-mix(in srgb, var(--art) 12%, transparent); }
+.folder__vids svg { width: 10px; height: 10px; }
+@media (max-width: 820px) { .vadd--3, .vadd--folder { grid-template-columns: minmax(0, 1fr); } .fvid { padding: 20px 16px; } }
