@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cardioteca</title>
+<meta name="description" content="Mi biblioteca personal de cardiología: archivos en Drive, videos y pendientes del día.">
+<meta name="theme-color" content="#FBF3F1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23B3172B'/%3E%3Cpath d='M3 17h7l3-7 4 14 3-9 2 2h7' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side" aria-label="Navegación">
+    <a class="brand" href="#/inicio" aria-label="Cardioteca, inicio">
+      <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="currentColor"/><path d="M3.5 17.5h6.5l3-7 4 13.5 3-8.5 1.8 2h7.7" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="brand__name">Cardioteca</span>
+    </a>
+    <nav class="nav" id="nav" aria-label="Secciones"></nav>
+    <div class="side__foot">
+      <div class="monitor monitor--side" title="Latidos por minuto: bajan a medida que completas tu día">
+        <canvas id="monSide" aria-hidden="true"></canvas>
+        <span class="monitor__bpm" id="bpmLabel">62 lpm</span>
+      </div>
+      <div class="sync" id="syncBox" aria-live="polite"></div>
+      <div class="side__row">
+        <button class="btn btn--ghost btn--sm" id="authBtn" type="button"></button>
+        <button class="icon-btn" id="themeBtn" type="button" aria-label="Cambiar entre tema claro y oscuro"></button>
+      </div>
+    </div>
+  </aside>
+  <main class="main" id="view" tabindex="-1"></main>
+</div>
+
+<dialog id="dlg" class="dlg"></dialog>
+<div id="uploadPanel" class="upanel" hidden></div>
+<div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer onload="window.dispatchEvent(new Event('gsi-ready'))"></script>
+</body>
+</html>
