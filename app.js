@@ -426,6 +426,7 @@ function render() {
   if (ui.view === 'inicio') { mountHero(); loadRecent(); }
   if (ui.view === 'videos') { bindVideoAutoplayReset(); loadTopFolders(); }
   if (ui.view === 'biblioteca') ui.autoplay = false;
+  bindPlayers();
 }
 
 /* — Inicio — */
@@ -609,7 +610,7 @@ const allTags = () => [...new Set(data.videos.map(v => v.tag).filter(Boolean))].
 const foldersOpts = (sel) => knownFolders().map(f => `<option value="${esc(f.id)}" ${f.id === sel ? 'selected' : ''}>${esc(f.name)}</option>`).join('');
 function stageHTML(cur) {
   if (!cur) return '';
-  return `<section class="stage"><div class="player"><iframe src="https://www.youtube-nocookie.com/embed/${esc(cur.vid)}?rel=0&modestbranding=1&playsinline=1${cur.start ? `&start=${cur.start}` : ''}${ui.autoplay ? '&autoplay=1' : ''}" title="${esc(cur.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+  return `<section class="stage"><div class="player"><iframe data-vid="${esc(cur.vid)}" src="https://www.youtube-nocookie.com/embed/${esc(cur.vid)}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(location.origin)}${cur.start ? `&start=${cur.start}` : ''}${ui.autoplay ? '&autoplay=1' : ''}" title="${esc(cur.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
     <div class="stage__info"><h2>${esc(cur.title)}</h2>
       <div class="stage__folder"><label for="vFolder">Carpeta</label><select id="vFolder" class="field" data-field="folder" data-id="${cur.id}"><option value="">Sin carpeta</option>${foldersOpts(cur.folderId)}</select></div>
       <div class="stage__folder"><label for="vTag">Tema</label><input id="vTag" class="field" list="tagList" value="${esc(cur.tag || '')}" placeholder="Tema (ej. Arritmias)" data-field="tag" data-id="${cur.id}"></div>
@@ -637,6 +638,21 @@ function vList() {
   <div class="vgrid">${list.map(vCard).join('')}</div>`
   : `<div class="empty"><strong>Aún no guardaste videos</strong>Pega un link de YouTube arriba. Se queda guardado y se reproduce sin salir de Cardioteca.</div>`}`;
 }
+/* avisa cuando el dueño del video bloquea la reproducción fuera de YouTube */
+function bindPlayers() {
+  $$('.player iframe[data-vid]').forEach(f => f.addEventListener('load', () => { try { f.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*'); } catch {} }, { once: true }));
+}
+addEventListener('message', e => {
+  if (!/(^|\.)youtube(-nocookie)?\.com$/.test((() => { try { return new URL(e.origin).hostname; } catch { return ''; } })())) return;
+  let d; try { d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch { return; }
+  if (!d || d.event !== 'onError' || ![100, 101, 150].includes(d.info)) return;
+  const f = $$('.player iframe[data-vid]').find(x => x.contentWindow === e.source); if (!f) return;
+  const box = f.parentElement, id = f.dataset.vid;
+  box.classList.add('player--blocked');
+  box.innerHTML = d.info === 100
+    ? `<div class="blocked"><strong>Este video ya no está disponible</strong><p>Pudo haber sido eliminado o puesto en privado por su autor.</p><a class="btn btn--primary" href="https://www.youtube.com/watch?v=${esc(id)}" target="_blank" rel="noopener">${icon('external')}<span>Intentar en YouTube</span></a></div>`
+    : `<div class="blocked"><strong>El autor no permite verlo aquí</strong><p>Algunos videos, sobre todo de música y televisión, solo se reproducen en YouTube. Tu link sigue guardado.</p><a class="btn btn--primary" href="https://www.youtube.com/watch?v=${esc(id)}" target="_blank" rel="noopener">${icon('external')}<span>Mirar en YouTube</span></a></div>`;
+});
 function refreshVideos() { const l = $('#vlist'); if (l) l.innerHTML = vList(); else if (ui.view === 'biblioteca') render(); }
 function bindVideoAutoplayReset() { ui.autoplay = false; }
 async function addVideo(url, tag, folder) {
