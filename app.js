@@ -809,5 +809,19 @@ async function boot() {
   if (LS.get('connected', 0)) { ui.conn = 'reconnect'; render(); } // hace falta un clic (el navegador bloquea popups sin gesto)
 }
 boot();
+
+/* Renovación en segundo plano: con cualquier clic o tecla, si la sesión vence pronto (o ya venció), se pide un token nuevo.
+   El gesto del usuario evita que el navegador bloquee la ventana de Google, que se abre y cierra sola. */
+let lastRenew = 0;
+function autoRenew() {
+  if (DEMO || !CFG.CLIENT_ID || !LS.get('connected', 0) || pendingAuth || !tokenClient) return;
+  if (token && tokenExp - Date.now() > 12 * 60 * 1000) return;
+  if (Date.now() - lastRenew < 20000) return;
+  lastRenew = Date.now();
+  const wasOff = ui.conn === 'reconnect';
+  getToken().then(() => { if (wasOff || ui.conn === 'reconnect') connect(); else if (ui.conn !== 'on') { ui.conn = 'on'; renderSync(); } }).catch(() => {});
+}
+addEventListener('pointerdown', autoRenew, true);
+addEventListener('keydown', autoRenew, true);
 setInterval(() => { if (dkey() !== ui.today) { ui.today = dkey(); render(); } }, 60000);
 })();
